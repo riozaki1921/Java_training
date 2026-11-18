@@ -1,86 +1,129 @@
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 public class Main {
-    private static int[] parent;
+    public static void main(String[] args) {
+        List<Edge> graph = List.of(
+                new Edge(1, 2, 9),
+                new Edge(1, 3, 2),
 
-    private static int find(int vertex){
-        if (parent[vertex] == vertex) return vertex;
-        return parent[vertex] = find(parent[vertex]);
-    }
+                new Edge(2, 4, 4),
+                new Edge(2, 5, 12),
 
-    private static boolean union(int e1, int e2) {
-        int rootU = find(e1);
-        int rootV = find(e2);
-        if (rootU != rootV) {
-            parent[rootV] = rootU;
-            return true;
-        }
-        return false;
-    }
+                new Edge(3, 2, 6),
+                new Edge(3, 5, 28),
+                new Edge(3, 6, 10),
 
-    public static void main (String[] args) {
-        List<Edge> RawEdges = List.of(
-                new Edge(1, 5, 2),
-                new Edge(1, 2, 6),
-                new Edge(2, 5, 1),
-                new Edge(6, 5, 7),
-                new Edge(2, 6, 5),
-                new Edge(2, 3, 9),
-                new Edge(2, 7, 3),
-                new Edge(6, 7, 4),
-                new Edge(3, 7, 8),
-                new Edge(1, 5, 2),
-                new Edge(7, 8, 16),
-                new Edge(7, 4, 3),
-                new Edge(3, 4, 12),
-                new Edge(4, 8, 4)
+                new Edge(4, 5, 16),
+                new Edge(4, 7, 19),
+
+                new Edge(5, 7, 3),
+
+                new Edge(6, 5, 15),
+                new Edge(6, 7, 25)
         );
 
-        int NumberOfVertices = 8;
+        System.out.println("Динамическое программирование");
+        solveDP(graph, 7, 1, 7);
 
-        System.out.println("--------Нахождение остовного дерева--------");
-        System.out.println("--------Алгоритм Краскала--------");
-        List<Edge> SortedEdges = RawEdges.stream().sorted().toList();
+        List<Edge> edges = List.of(
+                new Edge(1, 2, 8),
+                new Edge(1, 4, 5),
+                new Edge(1, 6, 9),
 
-        parent = new int[NumberOfVertices + 1];
-        for (int i = 1; i < NumberOfVertices + 1; i++) parent[i] = i;
-        List<Edge> kruskal = new ArrayList<>();
-        int SummaryWeightKruskal = 0;
+                new Edge(2, 3, 2),
+                new Edge(2, 4, 1),
 
-        for (Edge edge : SortedEdges) {
-            if (union(edge.start(), edge.end())) {
-                kruskal.add(edge);
-                SummaryWeightKruskal +=edge.weight();
-            }
-        }
-        kruskal.forEach(System.out::println);
-        System.out.println("Общий вес по Краскалу: " + SummaryWeightKruskal);
+                new Edge(3, 5, 3),
+                new Edge(3, 8, 10),
 
-        System.out.println("\n--------Алгоритм Прима--------");
-        List<Edge> prima = new ArrayList<>();
-        int SummaryWeightPrima = 0;
-        boolean[] visited = new boolean[NumberOfVertices + 1];
-        visited[1] = true;
+                new Edge(4, 5, 9),
+                new Edge(4, 6, 3),
 
-        while (prima.size() < NumberOfVertices - 1) {
-            Edge minEdge = null;
+                new Edge(5, 7, 4),
+                new Edge(5, 8, 6),
 
-            for (Edge edge : RawEdges) {
-                if (visited[edge.start()] && !visited[edge.end()] || !visited[edge.start()] && visited[edge.end()]) {
-                    if (minEdge == null || minEdge.weight() > edge.weight()) {
-                        minEdge = edge;
+                new Edge(6, 7, 12),
+
+                new Edge(7, 8, 7)
+        );
+
+        System.out.println("\nАлгоритм Дейкстры");
+        dijkstra(edges, 8, 1, 8);
+    }
+
+    public static void solveDP(List<Edge> graph, int n, int start, int end) {
+        int[] dp = new int[n + 1];
+        int[] parent = new int[n + 1];
+
+        Arrays.fill(dp, Integer.MAX_VALUE);
+        dp[start] = 0;
+
+        int[] order = {1, 3, 2, 4, 6, 5, 7};
+
+        for (int u : order) {
+            if (dp[u] == Integer.MAX_VALUE) continue;
+
+            for (Edge edge : graph) {
+                if (edge.start() == u) {
+                    int v = edge.end();
+                    if (dp[u] + edge.weight() < dp[v]) {
+                        dp[v] = dp[u] + edge.weight();
+                        parent[v] = u;
                     }
                 }
             }
-            if (minEdge == null) break;
-
-            prima.add(minEdge);
-            SummaryWeightPrima += minEdge.weight();
-            visited[minEdge.start()] = true;
-            visited[minEdge.end()] = true;
         }
-        prima.forEach(System.out::println);
-        System.out.println("Общий вес по Приму: " + SummaryWeightPrima);
+
+        printResult(start, end, dp[end], parent);
+    }
+
+    public static void dijkstra(List<Edge> edges, int n, int start, int end) {
+        Map<Integer, List<Edge>> adj = new HashMap<>();
+        for (int i = 1; i <= n; i++) {
+            adj.put(i, new ArrayList<>());
+        }
+        for (Edge e : edges) {
+            adj.get(e.start()).add(new Edge(e.start(), e.end(), e.weight()));
+            adj.get(e.end()).add(new Edge(e.end(), e.start(), e.weight()));
+        }
+
+        int[] dist = new int[n + 1];
+        int[] parent = new int[n + 1];
+        Arrays.fill(dist, Integer.MAX_VALUE);
+        dist[start] = 0;
+
+        PriorityQueue<Node> pq = new PriorityQueue<>();
+        pq.add(new Node(start, 0));
+
+        while (!pq.isEmpty()) {
+            Node current = pq.poll();
+            int u = current.vertex();
+
+            if (current.dist() > dist[u]) continue;
+
+            for (Edge edge : adj.get(u)) {
+                int v = edge.end();
+                int newDist = dist[u] + edge.weight();
+
+                if (newDist < dist[v]) {
+                    dist[v] = newDist;
+                    parent[v] = u;
+                    pq.add(new Node(v, newDist));
+                }
+            }
+        }
+
+        printResult(start, end, dist[end], parent);
+    }
+
+    private static void printResult(int start, int end, int minDistance, int[] parent) {
+        List<Integer> path = new ArrayList<>();
+        for (int curr = end; curr != 0; curr = parent[curr]) {
+            path.add(curr);
+        }
+        Collections.reverse(path);
+
+        System.out.println("Минимальное расстояние из " + start + " в " + end + ": " + minDistance);
+        System.out.println("Оптимальный маршрут: " + path);
     }
 }
